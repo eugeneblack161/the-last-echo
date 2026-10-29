@@ -51,7 +51,7 @@ export function movePlayer(
     -currentZLimit,
     currentZLimit,
   );
-  if (moving) player.rotation.y = Math.atan2(direction.x, direction.z);
+  player.rotation.y = cameraAzimuth + Math.PI;
   player.position.y = moving
     ? Math.abs(Math.sin(elapsed * (speed > WALK_SPEED ? 12 : 8))) * 0.055
     : 0;

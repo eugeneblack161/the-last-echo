@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 interface UseHoldToContinueOptions {
   onContinue: () => void;
   onExitStart?: () => void;
+  onPointerLock?: () => void;
+  onPointerUnlock?: () => void;
   holdDurationMs?: number;
   exitDurationMs?: number;
 }
@@ -12,6 +14,8 @@ interface UseHoldToContinueOptions {
 export function useHoldToContinue({
   onContinue,
   onExitStart,
+  onPointerLock,
+  onPointerUnlock,
   holdDurationMs = 650,
   exitDurationMs = 420,
 }: UseHoldToContinueOptions) {
@@ -19,6 +23,8 @@ export function useHoldToContinue({
   const [exiting, setExiting] = useState(false);
   const onContinueRef = useRef(onContinue);
   const onExitStartRef = useRef(onExitStart);
+  const onPointerLockRef = useRef(onPointerLock);
+  const onPointerUnlockRef = useRef(onPointerUnlock);
   const exitingRef = useRef(false);
   const holdStartedAtRef = useRef<number | null>(null);
   const holdIntervalRef = useRef<number | null>(null);
@@ -32,6 +38,14 @@ export function useHoldToContinue({
   useEffect(() => {
     onExitStartRef.current = onExitStart;
   }, [onExitStart]);
+
+  useEffect(() => {
+    onPointerLockRef.current = onPointerLock;
+  }, [onPointerLock]);
+
+  useEffect(() => {
+    onPointerUnlockRef.current = onPointerUnlock;
+  }, [onPointerUnlock]);
 
   useEffect(() => {
     const clearHold = () => {
@@ -72,6 +86,7 @@ export function useHoldToContinue({
       if (event.code !== "KeyE" || event.repeat || exitingRef.current) return;
 
       event.preventDefault();
+      onPointerLockRef.current?.();
       holdStartedAtRef.current = performance.now();
       holdIntervalRef.current = window.setInterval(() => {
         if (holdStartedAtRef.current === null) return;
@@ -84,12 +99,22 @@ export function useHoldToContinue({
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.code === "KeyE") clearHold();
+      if (event.code !== "KeyE") return;
+      const keepLock = exitingRef.current;
+      clearHold();
+      if (keepLock) onPointerLockRef.current?.();
+      else onPointerUnlockRef.current?.();
+    };
+
+    const handleBlur = () => {
+      const keepLock = exitingRef.current;
+      clearHold();
+      if (!keepLock) onPointerUnlockRef.current?.();
     };
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
-    window.addEventListener("blur", clearHold);
+    window.addEventListener("blur", handleBlur);
 
     return () => {
       holdStartedAtRef.current = null;
@@ -99,7 +124,7 @@ export function useHoldToContinue({
       }
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
-      window.removeEventListener("blur", clearHold);
+      window.removeEventListener("blur", handleBlur);
       if (exitTimeoutRef.current !== null) {
         window.clearTimeout(exitTimeoutRef.current);
       }

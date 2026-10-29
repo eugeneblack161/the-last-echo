@@ -92,16 +92,15 @@ export function GameOverlay({
   };
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLElement>) => {
-    event.preventDefault();
     event.stopPropagation();
   };
 
-  const runFromKeyboard = (
+  const runAction = (
     event: ReactMouseEvent<HTMLButtonElement>,
     action: () => void,
   ) => {
     event.stopPropagation();
-    if (event.detail === 0) action();
+    action();
   };
 
   return (
@@ -152,7 +151,7 @@ export function GameOverlay({
               </ul>
             )}
             <OverlayButton
-              onClick={(event) => runFromKeyboard(event, onClose)}
+              onClick={(event) => runAction(event, onClose)}
             >
               Закрыть инвентарь
             </OverlayButton>
@@ -163,21 +162,21 @@ export function GameOverlay({
         {view === "pause" && (
           <div className="mt-6 flex flex-col gap-2">
             <OverlayButton
-              onClick={(event) => runFromKeyboard(event, onClose)}
+              onClick={(event) => runAction(event, onClose)}
             >
               Продолжить
             </OverlayButton>
             <OverlayButton
-              onClick={(event) => runFromKeyboard(event, onOpenSettings)}
+              onClick={(event) => runAction(event, onOpenSettings)}
             >
               Настройки
             </OverlayButton>
             <OverlayButton
-              onClick={(event) => runFromKeyboard(event, onExitToMenu)}
+              onClick={(event) => runAction(event, onExitToMenu)}
             >
               Выйти в главное меню
             </OverlayButton>
-            <KeyboardHint>Esc — продолжить · W/S или ↑/↓ — выбор · Enter — открыть</KeyboardHint>
+            <KeyboardHint>Enter — продолжить · W/S или ↑/↓ — выбор · Esc — закрыть паузу</KeyboardHint>
           </div>
         )}
 
@@ -188,15 +187,16 @@ export function GameOverlay({
             </h3>
             <dl className="mt-3 divide-y divide-white/10 border-y border-white/10">
               <SettingRow keys="WASD / ↑ ↓ ← →" action="Движение" />
+              <SettingRow keys="Мышь" action="Обзор, курсор скрыт" />
               <SettingRow keys="Shift" action="Бег" />
               <SettingRow keys="Tab" action="Инвентарь" />
-              <SettingRow keys="Esc" action="Пауза / назад" />
+              <SettingRow keys="Esc" action="Пауза, курсор свободен" />
             </dl>
             <p className="mt-4 text-sm leading-relaxed text-[#a99b91]">
               Настройка клавиш и звука появится позже.
             </p>
             <OverlayButton
-              onClick={(event) => runFromKeyboard(event, onBackToPause)}
+              onClick={(event) => runAction(event, onBackToPause)}
             >
               Назад
             </OverlayButton>

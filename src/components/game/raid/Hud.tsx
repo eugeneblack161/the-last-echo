@@ -10,6 +10,8 @@ interface HudProps {
   controlsHintVisible: boolean;
   onDismissControlsHint: () => void;
   onControlsHintExitStart: () => void;
+  onPointerLock: () => void;
+  onPointerUnlock: () => void;
 }
 
 export function Hud({
@@ -18,6 +20,8 @@ export function Hud({
   controlsHintVisible,
   onDismissControlsHint,
   onControlsHintExitStart,
+  onPointerLock,
+  onPointerUnlock,
 }: HudProps) {
   return (
     <>
@@ -65,6 +69,8 @@ export function Hud({
             <ControlsGuide
               onContinue={onDismissControlsHint}
               onExitStart={onControlsHintExitStart}
+              onPointerLock={onPointerLock}
+              onPointerUnlock={onPointerUnlock}
             />
           )
         )}
@@ -79,8 +85,10 @@ export function Hud({
           <div className="pointer-events-none absolute bottom-5 left-5 text-sm uppercase tracking-[0.1em] text-[#a99b91] sm:bottom-7 sm:left-9 sm:text-base">
             WASD / стрелки — движение
             <span className="mx-2 text-white/20">·</span>
+            Движение мыши — обзор
+            <span className="mx-2 text-white/20">·</span>
             Tab — инвентарь <span className="mx-2 text-white/20">·</span> Esc —
-            пауза
+            пауза, курсор свободен
           </div>
         </>
       )}

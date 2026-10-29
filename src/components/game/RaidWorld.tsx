@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Hud } from "@/components/game/raid/Hud";
 import {
@@ -30,15 +30,28 @@ export function RaidWorld({
   const [overlayView, setOverlayView] = useState<GameOverlayView>(null);
   const [activeInteractable, setActiveInteractable] =
     useState<InteractableDetails | null>(null);
-  const { hostRef, status } = useRuntime(
+  const lockOnEscapeKeyUpRef = useRef(false);
+  const { hostRef, status, requestLookLock, releaseLookLock } = useRuntime(
     !controlsInputLocked && overlayView === null && activeInteractable === null,
     controlsInputLocked || overlayView !== null || activeInteractable !== null,
   );
 
   const exitToMenu = () => {
+    releaseLookLock();
     setOverlayView(null);
     onExitToMenu();
   };
+
+  const resumeGame = () => {
+    setOverlayView(null);
+    requestLookLock();
+  };
+
+  useEffect(() => {
+    if (overlayView !== null || activeInteractable !== null) {
+      releaseLookLock();
+    }
+  }, [activeInteractable, overlayView, releaseLookLock]);
 
   useEffect(() => {
     const handleMenuKey = (event: KeyboardEvent) => {
@@ -49,6 +62,8 @@ export function RaidWorld({
           event.preventDefault();
           event.stopPropagation();
           setActiveInteractable(null);
+          if (event.code === "Escape") lockOnEscapeKeyUpRef.current = true;
+          else requestLookLock();
         }
         return;
       }
@@ -60,16 +75,25 @@ export function RaidWorld({
         event.preventDefault();
         event.stopPropagation();
         setActiveInteractable(status.nearbyInteractable);
+        releaseLookLock();
         return;
       }
 
       if (event.code === "Escape") {
         event.preventDefault();
         event.stopPropagation();
-        setOverlayView((current) => {
-          if (current === "settings") return "pause";
-          return current === null ? "pause" : null;
-        });
+        if (overlayView === "settings") {
+          setOverlayView("pause");
+          return;
+        }
+        if (overlayView === null) {
+          lockOnEscapeKeyUpRef.current = false;
+          setOverlayView("pause");
+          releaseLookLock();
+          return;
+        }
+        lockOnEscapeKeyUpRef.current = true;
+        setOverlayView(null);
         return;
       }
 
@@ -78,24 +102,40 @@ export function RaidWorld({
         (overlayView === null || overlayView === "inventory")
       ) {
         event.preventDefault();
-        setOverlayView((current) =>
-          current === "inventory" ? null : "inventory",
-        );
+        if (overlayView === "inventory") {
+          setOverlayView(null);
+          requestLookLock();
+          return;
+        }
+        setOverlayView("inventory");
+        releaseLookLock();
       }
     };
 
+    const handleMenuKeyUp = (event: KeyboardEvent) => {
+      if (event.code !== "Escape" || !lockOnEscapeKeyUpRef.current) return;
+      lockOnEscapeKeyUpRef.current = false;
+      requestLookLock();
+    };
+
     window.addEventListener("keydown", handleMenuKey);
-    return () => window.removeEventListener("keydown", handleMenuKey);
+    window.addEventListener("keyup", handleMenuKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleMenuKey);
+      window.removeEventListener("keyup", handleMenuKeyUp);
+    };
   }, [
     activeInteractable,
     controlsHintVisible,
     overlayView,
+    releaseLookLock,
+    requestLookLock,
     status.error,
     status.nearbyInteractable,
   ]);
 
   return (
-    <div className="relative h-full w-full cursor-none overflow-hidden bg-[#100d0e] [&_*]:cursor-none">
+    <div className="relative h-full w-full overflow-hidden bg-[#100d0e]">
       <div ref={hostRef} className="absolute inset-0" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(8,6,7,0.24),transparent_28%,transparent_72%,rgba(8,6,7,0.2))]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(0deg,rgba(8,6,7,0.24),transparent_22%,transparent_78%,rgba(8,6,7,0.18))]" />
@@ -115,12 +155,14 @@ export function RaidWorld({
           controlsHintVisible={controlsHintVisible}
           onDismissControlsHint={() => setControlsHintVisible(false)}
           onControlsHintExitStart={() => setControlsInputLocked(false)}
+          onPointerLock={requestLookLock}
+          onPointerUnlock={releaseLookLock}
         />
         <GameOverlay
           view={overlayView}
           inventory={inventory}
           characterName={characterName}
-          onClose={() => setOverlayView(null)}
+          onClose={resumeGame}
           onOpenSettings={() => setOverlayView("settings")}
           onBackToPause={() => setOverlayView("pause")}
           onExitToMenu={exitToMenu}

@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
+import {
+  collectCameraOccluders,
+  createCameraRig,
+  rotateCameraRig,
+  updateCameraRig,
+} from "@/components/game/raid/cameraRig";
 import {
   createPlayer,
   disposePlayerAnimation,
@@ -22,7 +27,20 @@ import {
   type WorldStatus,
 } from "@/components/game/raid/constants";
 import { findNearbyInteractable } from "@/components/game/raid/interactables";
-import { followPlayer, movePlayer } from "@/components/game/raid/updatePlayer";
+import { movePlayer } from "@/components/game/raid/updatePlayer";
+
+const LOOK_LOCK_KEYS = new Set([
+  "KeyW",
+  "KeyA",
+  "KeyS",
+  "KeyD",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "ShiftLeft",
+  "ShiftRight",
+]);
 
 export function useRuntime(
   inputEnabled: boolean,
@@ -32,6 +50,8 @@ export function useRuntime(
   const inputEnabledRef = useRef(inputEnabled);
   const simulationPausedRef = useRef(simulationPaused);
   const pressedKeysRef = useRef(new Set<string>());
+  const requestLookLockRef = useRef<() => void>(() => {});
+  const releaseLookLockRef = useRef<() => void>(() => {});
   const [status, setStatus] = useState<WorldStatus>(INITIAL_WORLD_STATUS);
 
   useEffect(() => {
@@ -68,15 +88,9 @@ export function useRuntime(
       host.clientWidth / host.clientHeight ||
       window.innerWidth / window.innerHeight;
     const { scene, camera, interactables } = createScene(aspect);
-    const cameraControls = new OrbitControls(camera, renderer.domElement);
-    cameraControls.target.set(0, 1, 0);
-    cameraControls.enableDamping = true;
-    cameraControls.enablePan = false;
-    cameraControls.minDistance = 4;
-    cameraControls.maxDistance = 12;
-    cameraControls.maxPolarAngle = Math.PI / 2 - 0.05;
-    cameraControls.update();
+    const cameraRig = createCameraRig(camera);
     const player = createPlayer(scene);
+    const cameraOccluders = collectCameraOccluders(scene, player.root);
     void loadMixamoCharacter(player).then(
       () => {
         if (!player.disposed) {
@@ -101,10 +115,25 @@ export function useRuntime(
     const pressedKeys = pressedKeysRef.current;
     const timer = new THREE.Timer();
     timer.connect(document);
+    const canvas = renderer.domElement;
+    const requestLookLock = () => requestElementLock(canvas);
+    const releaseLookLock = () => releaseElementLock(canvas);
+    requestLookLockRef.current = requestLookLock;
+    releaseLookLockRef.current = releaseLookLock;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!inputEnabledRef.current) return;
+      if (document.pointerLockElement !== canvas) return;
+      rotateCameraRig(cameraRig, event.movementX, event.movementY);
+    };
+    const handleContextMenu = (event: Event) => {
+      event.preventDefault();
+    };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const key = event.code;
       if (!inputEnabledRef.current || player.mixer === null) return;
+      if (LOOK_LOCK_KEYS.has(key)) requestLookLock();
       if (
         [
           "ArrowUp",
@@ -123,6 +152,8 @@ export function useRuntime(
     };
     const clearKeys = () => pressedKeys.clear();
 
+    window.addEventListener("pointermove", handlePointerMove);
+    canvas.addEventListener("contextmenu", handleContextMenu);
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("blur", clearKeys);
@@ -136,21 +167,25 @@ export function useRuntime(
       timer.update(timestamp);
       const delta = Math.min(timer.getDelta(), 0.05);
       statusElapsed += delta;
-      cameraControls.update();
-
       let movement = { moving: false, running: false };
       if (inputEnabledRef.current) {
         movement = movePlayer(
           player.root,
           pressedKeys,
-          cameraControls.getAzimuthalAngle(),
+          cameraRig.azimuth,
           timer.getElapsed(),
           delta,
         );
       }
       setPlayerMovement(player, movement.moving, movement.running);
       updatePlayerAnimation(player, delta);
-      followPlayer(camera, cameraControls, player.root.position, delta);
+      updateCameraRig(
+        camera,
+        cameraRig,
+        player.root.position,
+        delta,
+        cameraOccluders,
+      );
       renderer.render(scene, camera);
 
       if (statusElapsed >= 0.12) {
@@ -173,7 +208,11 @@ export function useRuntime(
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", clearKeys);
-      cameraControls.dispose();
+      window.removeEventListener("pointermove", handlePointerMove);
+      canvas.removeEventListener("contextmenu", handleContextMenu);
+      releaseLookLock();
+      requestLookLockRef.current = () => {};
+      releaseLookLockRef.current = () => {};
       timer.dispose();
       disposePlayerAnimation(player);
       disposeScene(scene);
@@ -182,7 +221,23 @@ export function useRuntime(
     };
   }, []);
 
-  return { hostRef, status };
+  const requestLookLock = useCallback(() => {
+    requestLookLockRef.current();
+  }, []);
+  const releaseLookLock = useCallback(() => {
+    releaseLookLockRef.current();
+  }, []);
+
+  return { hostRef, status, requestLookLock, releaseLookLock };
+}
+
+function requestElementLock(element: HTMLElement) {
+  if (document.pointerLockElement === element) return;
+  void Promise.resolve(element.requestPointerLock()).catch(() => {});
+}
+
+function releaseElementLock(element: HTMLElement) {
+  if (document.pointerLockElement === element) document.exitPointerLock();
 }
 
 function disposeScene(scene: THREE.Scene) {

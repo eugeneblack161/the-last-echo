@@ -8,6 +8,8 @@ interface HoldToContinuePanelProps {
   children: ReactNode;
   onContinue: () => void;
   onExitStart?: () => void;
+  onPointerLock?: () => void;
+  onPointerUnlock?: () => void;
   continueLabel?: string;
   holdInstruction?: string;
 }
@@ -16,12 +18,16 @@ export function HoldToContinuePanel({
   children,
   onContinue,
   onExitStart,
+  onPointerLock,
+  onPointerUnlock,
   continueLabel = "Дальше",
   holdInstruction = "Удерживайте, чтобы продолжить",
 }: HoldToContinuePanelProps) {
   const { progress, exiting, handleTransitionEnd } = useHoldToContinue({
     onContinue,
     onExitStart,
+    onPointerLock,
+    onPointerUnlock,
   });
 
   return (
