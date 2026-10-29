@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-cormorant-family), "Cormorant Garamond", serif;
+  --font-cinzel: "Cinzel", var(--font-cormorant-family), serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+a,
+button,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(a, button, input, textarea, select):focus-visible {
+  outline: 2px solid #d46060;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(212, 96, 96, 0.2);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: #e7e2dc;
+  background: #050505;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(120, 20, 20, 0.5);
+  color: white;
+}
+
+button,
+a {
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.chronicle-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chronicle-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 0;
+  transition:
+    background 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.chronicle-scrollbar:hover::-webkit-scrollbar-thumb,
+.chronicle-scrollbar:active::-webkit-scrollbar-thumb {
+  background: #3d2922;
+}
+
+.chronicle-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: #8e1f1f;
+  box-shadow: 0 0 10px rgba(142, 31, 31, 0.4);
+}
+
+.chronicle-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.chronicle-scrollbar:hover {
+  scrollbar-color: #8e1f1f transparent;
 }
