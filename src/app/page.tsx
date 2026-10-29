@@ -116,7 +116,7 @@ export default function HomePage() {
                     disabled={hydrationStatus !== "ready"}
                     onClick={() => {
                       loadGame(latestSave.slotId);
-                      router.push("/game");
+                      router.push("/raid");
                     }}
                     className="mt-4 border border-[#5c1f1f] bg-[#160909] px-4 py-2 text-[11px] uppercase tracking-[0.15em] text-[#d46060] transition hover:bg-[#220d0d] disabled:opacity-40"
                   >

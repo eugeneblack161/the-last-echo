@@ -44,7 +44,7 @@ export function EditorForm() {
     event.preventDefault();
     if (!name.trim() || !selected || slotId === null) return;
     startNewGame(name.trim(), selected.value, slotId);
-    router.push("/game");
+    router.push("/raid");
   };
 
   if (!selected) return null;

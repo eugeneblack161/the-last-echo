@@ -72,7 +72,7 @@ export default function ArchivesPage() {
                         disabled={hydrationStatus !== "ready"}
                         onClick={() => {
                           loadGame(slotId);
-                          router.push("/game");
+                          router.push("/raid");
                         }}
                         className="border border-[#5c1f1f] bg-[#160909] px-5 py-2 text-[11px] uppercase tracking-[0.18em] text-[#d46060] transition hover:bg-[#220d0d] disabled:opacity-40"
                       >
